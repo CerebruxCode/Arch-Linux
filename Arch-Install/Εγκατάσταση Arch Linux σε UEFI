@@ -1,0 +1,215 @@
+#)))))))))))) Εγκατάσταση Arch Linux σε PC με UEFI ((((((((((((((((((( #
+#
+# πηγή: http://wp.me/pq2ce-f5y 
+#
+#
+# Το Arch Linux δεν βγαίνει σε διαφορετικές εκδόσεις (π.χ. για server, desktop, workstation, cloud κλπ) διότι πολύ απλά η τελική έκδοση που θα υπάρχει σε έναν υπολογιστή, αφού ολοκληρωθεί η εγκατάστασή του, έχει να κάνει με τον χρήστη του συστήματος και όχι με το ίδιο το σύστημα.
+
+# >>>>>> Εσείς δημιουργείτε την έκδοση και όχι το Arch Linux <<<<<<<<< #
+________________________________________________________________________
+####Σενάριο εγκατάστασης Arch Linux
+
+#Πριν ξεκινήσουμε, θα πρέπει να δούμε τι ακριβώς θα πετύχουμε στο τέλος αυτού του οδηγού:
+
+#Θα διαγράψουμε ΤΑ ΠΑΝΤΑ απο τον σκληρό δίσκο (Dual boot θα δούμε σε επόμενο άρθρο)
+#Θα δημιουργήσουμε δύο Partions, ένα για το EFI (χρειάζεται λόγο UEFI) και ένα για το root ( / )
+#Θα δημιουργήσουμε έναν χρήστη με δικαιώματα διαχειριστή
+#Θα ενεργοποιήσουμε υποστήριξη για 32bit εφαρμογές (χρειάζεται ειδικά για το Steam)
+#Θα προσθέσουμε πρόσβαση στο AUR
+#Το σύστημα θα είναι στα Αγγλικά (μπορείτε να το αλλάξετε αργότερα αυτό)
+#Στο τέλος θα σας αφήσω με το .... πληκτρολόγιο στο χέρι και να κοιτάτε σαν χαζά μια οθόνη τερματικού με τον κέρσορα να αναβοσβήνει για να αποφασίσετε τι γραφικό περιβάλλον θέλετε για το Desktop σας.
+
+Δεν θα έχουμε Swap Partition γιατί είναι ντεμοντέ και γιατί μπορεί όποιος θέλει να χρησιμοποιήσει το SystemD-Swap όπως γράφω εδώ : http://wp.me/pq2ce-f5d
+-------------------------------------------------------------------------
+
+#### Λήψη του ISO και εγγραφή σε USB
+
+Πηγαίνετε στο :
+
+https://www.archlinux.org/download/
+
+# Δείτε το όνομα του USB
+
+lsblk
+
+# Γράψτε το ISO στο USB
+
+sudo -i
+
+dd bs=4M if=διαδρομή-του-archlinux.iso of=/dev/onoma-usb status=progress && sync
+
+
+#### Έλεγχος UEFI στο Arch Linux
+
+efivar -l
+
+#### Έλεγχος συνδεσιμότητας με το Internet
+
+ping -c 3 www.google.com
+
+# Αν Wifi σύνδεση τότε :
+
+wifi-menu
+
+#### Δημιουργία Partion για το Arch Linux
+
+# Διαγραφή δεδομένων απο τον δίσκο
+
+sgdisk -Z /dev/sda
+
+
+cgdisk /dev/sda
+
+#    αφού πατήσετε Enter θα μπείτε στο μενού δημιουργίας Partition. Εκεί θα δείτε το FREE SPACE όπου :
+#    με τα βελάκια διαλέγετε New και πατάτε Enter και ξανά Enter για την επιλογή του Sector
+#    γράφετε το μέγεθος που θέλετε να ορίσετε για το EFI Partition (τουλάχιστον 500ΜΒ) και πατάτε Enter και ξανά Enter
+#    Με τα βελάκια, διαλέγετε το τελευταίο Free Space και πατάτε Enter για να δημιουργηθεί το Partition για το Root ( / ) και να πάρει όλο τον υπόλοιπο ελεύθερο χώρο.
+#    Τέλος με τα βελάκια επιλέξτε το Write για να προχωρήσει η αποθήκευση των αλλαγών, πληκτρολογήστε yes όταν σας ζητηθεί και έπειτα διαλέξτε το Quit για να βγείτε από το πρόγραμμα.
+
+#### Format των Partition
+
+mkfs.ext4 /dev/sda2
+mkfs.fat -F32 /dev/sda1 # Για το EFI partition
+
+# Mount τα partition
+
+mount /dev/sda2 /mnt
+mkdir /mnt/boot
+mount /dev/sda1 /mnt/boot
+
+#### Προσθήκη πηγών λογισμικού (Mirrors)
+
+pacman -Syy
+pacman -S reflector
+reflector --latest 10 --protocol http --protocol https --sort 
+rate --save /etc/pacman.d/mirrorlist
+pacman -Syy
+
+#### Εγκατάσταση της Βάσης του Arch Linux
+
+pacstrap -i /mnt base base-devel
+
+#### Δημιουργία fstab
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+#### Είσοδος στο εγκατεστημένο Arch Linux
+
+arch-chroot /mnt
+
+#### Τροποποίηση Γλώσσας και Ζώνης Ώρας
+
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+locale-gen
+echo LANG=en_US.UTF-8 > /etc/locale.conf
+export LANG=en_US.UTF-8
+
+#Ρυθμίζουμε και την ώρα του συστήματος
+
+ln -sf /usr/share/zoneinfo/Europe/Athens /etc/localtime
+hwclock --systohc
+
+#### Όνομα υπολογιστή και Τομέα
+
+echo arch-pc > /etc/hostname
+nano /etc/hosts
+
+#<ip-address>          <hostname.domain.org>               <hostname>
+#127.0.0.1                  localhost.localdomain                     localhost
+#127.0.1.1                  arch-pc.localdomain                        arch-pc
+#::1                          localhost.localdomain                     localhost
+
+#### Ρύθμιση της κάρτας δικτύου για πρόσβαση στο Internet
+
+# Για ενσύρματη σύνδεση
+
+ip link # Για να δείτε το όνομα της κάρτας δικτύου (card-name)
+systemctl enable dhcpcd@card-name.service
+
+# Για ασύρματη σύνδεση
+
+ip link
+pacman -S iw wpa_supplicant dialog wpa_actiond
+systemctl enable netctl-auto@card-name.service
+
+#### Αλλαγή του συνθηματικού του Root
+
+passwd
+
+#### Ρύθμιση του Boot Loader για το Arch Linux
+
+pacman -S grub efibootmngr
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=arch_grub --recheck
+grub-mkconfig -o /boot/grub/grub.cfg
+
+#### Έξοδος και Επανεκκίνηση στο εγκατεστημένο Arch Linux
+
+exit
+umount -R /mnt
+reboot
+
+#### Πρώτη εκκίνηση του Arch Linux
+# Αν έχετε ασύρματη σύνδεση
+
+wifi-menu
+
+#### Δημιουργία νέου χρήστη για το Arch Linux και δικαιώματα διαχειριστή
+
+useradd -m -G wheel -s /bin/bash username
+passwd username
+
+# Τον προσθέσουμε στους διαχειριστές
+
+EDITOR=nano visudo
+username=(ALL) ALL
+
+#### Προσθήκη Multilib και AUR στο Arch Linux
+
+nano /etc/pacman.conf
+
+# Uncomment την παρακάτω γραμμή:
+
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+
+# Προσθήκη την παρακάτω γραμμή στο τέλος
+
+[archlinuxfr]
+SigLevel = Never
+Server = http://repo.archlinux.fr/$arch
+
+pacman -Syy yaourt
+
+#### Εγκατάσταση γραφικού περιβάλλοντος Desktop στο Arch Linux
+
+sudo pacman -Syyu
+
+## Διαλέξτε ένα
+
+# GNOME Desktop
+
+sudo pacman -Syy gnome gnome-extra
+sudo systemctl enable gdm
+sudo reboot
+
+# KDE Desktop
+
+sudo pacman -Syy plasma-meta plasma-wayland-session sddm
+sudo systemctl enable ssdm
+sudo reboot
+
+# XFCE Desktop
+
+sudo pacman -Syy xfce4 xfce4-goodies lightdm
+sudo systemctl enable lightdm
+sudo reboot
+
+# LXDE Desktop
+
+sudo pacman -Syy lxde lxdm
+sudo systemctl enable lxdm
+sudo reboot
+
+# Μερικά από τα άρθρα που έχουμε γράψει κατά καιρούς θα τα βρείτε στο νήμα :
+
+https://cerebrux.net/tag/arch-linux
