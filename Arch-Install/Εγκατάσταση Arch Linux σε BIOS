@@ -93,7 +93,7 @@ pacman -Syy
 
 #### Εγκατάσταση της Βάσης του Arch Linux
 
-pacstrap -i /mnt base linux linux-firmware
+pacstrap /mnt base linux linux-firmware
 
 #### Δημιουργία fstab
 
