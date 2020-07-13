@@ -34,7 +34,7 @@ lsblk
 
 # Γράψτε το ISO στο USB
 
-sudo -i
+sudo -i 
 
 dd bs=4M if=διαδρομή-του-archlinux.iso of=/dev/onoma-usb status=progress && sync
 
@@ -44,7 +44,19 @@ ping -c 3 www.google.com
 
 # Αν Wifi σύνδεση τότε :
 
-wifi-menu
+iwctl
+
+device list # Εδώ βρίσκουμε το device name και το αντικαθιστούμε όπου device
+
+station device scan
+
+station device get-networks
+
+station device connect SSID # Όπου SSID το όνομα του δικτύου
+
+#### Συγχρονισμός της ώρας του συστήματος
+
+timedatectl set-ntp true
 
 #### Δημιουργία Partion για το Arch Linux
 
@@ -76,13 +88,12 @@ mount /dev/sda1 /mnt
 
 pacman -Syy
 pacman -S reflector
-reflector --latest 10 --protocol http --protocol https --sort 
-rate --save /etc/pacman.d/mirrorlist
+reflector --latest 10 --protocol http --protocol https --sort rate --save /etc/pacman.d/mirrorlist
 pacman -Syy
 
 #### Εγκατάσταση της Βάσης του Arch Linux
 
-pacstrap -i /mnt base base-devel
+pacstrap /mnt base linux linux-firmware
 
 #### Δημιουργία fstab
 
@@ -97,7 +108,6 @@ arch-chroot /mnt
 echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
 locale-gen
 echo LANG=en_US.UTF-8 > /etc/locale.conf
-export LANG=en_US.UTF-8
 
 #Ρυθμίζουμε και την ώρα του συστήματος
 
@@ -110,11 +120,13 @@ echo arch-pc > /etc/hostname
 nano /etc/hosts
 
 #<ip-address>          <hostname.domain.org>               <hostname>
-#127.0.0.1                  localhost.localdomain                     localhost
-#127.0.1.1                  arch-pc.localdomain                        arch-pc
-#::1                          localhost.localdomain                     localhost
+127.0.0.1               localhost.localdomain               localhost
+127.0.1.1               arch-pc.localdomain                 arch-pc
+::1                     localhost.localdomain               localhost
 
 #### Ρύθμιση της κάρτας δικτύου για πρόσβαση στο Internet
+
+sudo pacman -S dhcpcd 
 
 # Για ενσύρματη σύνδεση
 
@@ -146,7 +158,15 @@ reboot
 #### Πρώτη εκκίνηση του Arch Linux
 # Αν έχετε ασύρματη σύνδεση
 
-wifi-menu
+iwctl
+
+device list # Εδώ βρίσκουμε το device name και το αντικαθιστούμε όπου device
+
+station device scan
+
+station device get-networks
+
+station device connect SSID  # Όπου SSID το όνομα του δικτύου
 
 #### Δημιουργία νέου χρήστη για το Arch Linux και δικαιώματα διαχειριστή
 
@@ -156,6 +176,8 @@ passwd username
 # Τον προσθέσουμε στους διαχειριστές
 
 EDITOR=nano visudo
+
+#Προσθέτουμε κάτω από την γραμμή root ALL=(ALL) ALL
 username=(ALL) ALL
 
 #### Προσθήκη Multilib και AUR στο Arch Linux
@@ -167,17 +189,22 @@ nano /etc/pacman.conf
 [multilib]
 Include = /etc/pacman.d/mirrorlist
 
-# Προσθήκη την παρακάτω γραμμή στο τέλος
+# AUR
 
-[archlinuxfr]
-SigLevel = Never
-Server = http://repo.archlinux.fr/$arch
-
-pacman -Syy yaourt
+sudo pacman -S git
+cd /opt
+git clone https://aur.archlinux.org/yay.git
+sudo chown -R username:username yay
+cd yay
+makepkg -si
 
 #### Εγκατάσταση γραφικού περιβάλλοντος Desktop στο Arch Linux
 
 sudo pacman -Syyu
+
+## Εγκατάσταση Xorg και Pulseaudio
+
+sudo pacman -S xorg xorg-server xorg-xinit alsa-utils alsa-firmware pulseaudio pulseaudio-alsa
 
 ## Διαλέξτε ένα
 
